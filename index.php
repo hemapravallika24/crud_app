@@ -1,45 +1,36 @@
+<?php require_once __DIR__ . '/header.php'; ?>
+
 <?php
-require_once __DIR__ . '/config.php';
-
-if (!is_logged_in()) {
-    header("Location: login.php");
-    exit;
-}
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $title = trim($_POST['title']);
-    $content = trim($_POST['content']);
-
-    if ($title !== '' && $content !== '') {
-        $stmt = $pdo->prepare("INSERT INTO posts (title, content, user_id) VALUES (?, ?, ?)");
-        $stmt->execute([$title, $content, $_SESSION['user_id']]);
-
-        // ✅ Redirect back to posts list
-        header("Location: index.php");
-        exit;
-    } else {
-        $error = "Both fields are required!";
-    }
-}
+// Fetch posts
+$stmt = $pdo->query("SELECT p.id, p.title, p.content, p.created_at, u.username
+                     FROM posts p
+                     LEFT JOIN users u ON u.id = p.user_id
+                     ORDER BY p.created_at DESC");
+$posts = $stmt->fetchAll();
 ?>
 
-<?php include 'header.php'; ?>
-<div class="container">
-    <h2>New Post</h2>
-    <?php if (!empty($error)): ?>
-        <div class="alert alert-danger"><?= htmlspecialchars($error) ?></div>
-    <?php endif; ?>
-    <form method="post" action="create.php">
-        <div class="mb-3">
-            <label class="form-label">Title</label>
-            <input type="text" name="title" class="form-control" required>
-        </div>
-        <div class="mb-3">
-            <label class="form-label">Content</label>
-            <textarea name="content" class="form-control" rows="5" required></textarea>
-        </div>
-        <button type="submit" class="btn btn-primary">Create</button>
-        <a href="index.php" class="btn btn-link">Cancel</a>
-    </form>
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h3">All Posts</h1>
+  <?php if (is_logged_in()): ?>
+    <a href="/create.php" class="btn btn-primary">+ New Post</a>
+  <?php endif; ?>
 </div>
-<?php include 'footer.php'; ?>
+
+<?php if (empty($posts)): ?>
+  <div class="alert alert-info">No posts yet.</div>
+<?php else: ?>
+  <div class="list-group">
+    <?php foreach ($posts as $post): ?>
+      <a href="/view.php?id=<?= $post['id'] ?>" class="list-group-item list-group-item-action">
+        <div class="d-flex w-100 justify-content-between">
+          <h5 class="mb-1"><?= htmlspecialchars($post['title']) ?></h5>
+          <small><?= htmlspecialchars($post['created_at']) ?></small>
+        </div>
+        <p class="mb-1 text-truncate"><?= htmlspecialchars($post['content']) ?></p>
+        <small>By <?= htmlspecialchars($post['username'] ?? 'Unknown') ?></small>
+      </a>
+    <?php endforeach; ?>
+  </div>
+<?php endif; ?>
+
+<?php require_once __DIR__ . '/footer.php'; ?>
