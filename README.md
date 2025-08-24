@@ -51,7 +51,7 @@ Develop a simple blog-style web application to perform CRUD operations with user
 1. Import the `db.sql` file into MySQL.
 2. Update database credentials in `config.php`.
 3. Start Apache & MySQL in XAMPP.
-4. Run the app at: `http://localhost/crud_app/`
+4. Run the app at: [http://localhost/crud_app/](http://localhost/crud_app/)
 
 ## 🔗 Localhost Links
 Once your XAMPP server is running, open these in your browser:
