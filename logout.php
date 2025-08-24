@@ -1,6 +1,11 @@
 <?php
-require_once __DIR__ . '/config.php';
+session_start(); // Start the session
+
+// Destroy all session data
+session_unset();
 session_destroy();
-header("Location: /");
-exit;
+
+// Redirect to login page
+header("Location: login.php");
+exit();
 ?>
