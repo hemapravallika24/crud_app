@@ -20,4 +20,20 @@ $stmt->execute([$id]);
 
 header("Location: /");
 exit;
-?>
+?><?php
+require_once "config.php";
+
+if (!is_logged_in()) {
+    header("Location: login.php");
+    exit;
+}
+
+$id = $_GET['id'] ?? null;
+if ($id) {
+    $stmt = $pdo->prepare("DELETE FROM posts WHERE id = ?");
+    $stmt->execute([$id]);
+}
+
+header("Location: index.php");
+exit;
+
