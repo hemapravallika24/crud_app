@@ -1,39 +1,38 @@
 <?php
-include 'config.php';
+require_once __DIR__ . '/config.php';
 
-if (!isset($_SESSION['username'])) {
-    header("Location: login.php");
-    exit();
+if (!is_logged_in()) {
+    die("You must be logged in to edit a post.");
 }
 
-$id = $_GET['id'] ?? null;
-if (!$id) {
-    header("Location: index.php");
-    exit();
+if (!isset($_GET['id'])) {
+    die("Invalid request.");
 }
+
+$post_id = (int) $_GET['id'];
 
 // fetch post
 $stmt = $pdo->prepare("SELECT * FROM posts WHERE id = ?");
-$stmt->execute([$id]);
+$stmt->execute([$post_id]);
 $post = $stmt->fetch();
 
-if ($post['user_id'] != $_SESSION['user_id']) {
-    die("You are not allowed to edit/delete this post.");
+if (!$post) {
+    die("Post not found.");
 }
 
-
-// handle form submit
+// update post when form is submitted
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $title = $_POST['title'];
-    $content = $_POST['content'];
+    $title = trim($_POST['title']);
+    $content = trim($_POST['content']);
 
     $stmt = $pdo->prepare("UPDATE posts SET title = ?, content = ? WHERE id = ?");
-    $stmt->execute([$title, $content, $id]);
+    $stmt->execute([$title, $content, $post_id]);
 
     header("Location: index.php");
-    exit();
+    exit;
 }
 ?>
+
 <!DOCTYPE html>
 <html>
 <head>
@@ -45,11 +44,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <form method="POST">
         <div class="mb-3">
             <label>Title</label>
-            <input type="text" name="title" class="form-control" value="<?= htmlspecialchars($post['title']) ?>" required>
+            <input type="text" name="title" value="<?php echo htmlspecialchars($post['title']); ?>" class="form-control" required>
         </div>
         <div class="mb-3">
             <label>Content</label>
-            <textarea name="content" class="form-control" rows="5" required><?= htmlspecialchars($post['content']) ?></textarea>
+            <textarea name="content" class="form-control" required><?php echo htmlspecialchars($post['content']); ?></textarea>
         </div>
         <button type="submit" class="btn btn-success">Update</button>
         <a href="index.php" class="btn btn-secondary">Cancel</a>
