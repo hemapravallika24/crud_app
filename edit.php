@@ -17,9 +17,10 @@ $stmt = $pdo->prepare("SELECT * FROM posts WHERE id = ?");
 $stmt->execute([$id]);
 $post = $stmt->fetch();
 
-if (!$post || $post['author'] !== $_SESSION['username']) {
-    die("You are not allowed to edit this post.");
+if ($post['user_id'] != $_SESSION['user_id']) {
+    die("You are not allowed to edit/delete this post.");
 }
+
 
 // handle form submit
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {

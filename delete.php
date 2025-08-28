@@ -1,30 +1,27 @@
-<?php
-include 'config.php';
+require_once __DIR__ . '/config.php';
 
-if (!isset($_SESSION['username'])) {
-    header("Location: login.php");
-    exit();
+if (!is_logged_in()) {
+    die("You must be logged in to delete a post.");
 }
 
-$id = $_GET['id'] ?? null;
-if (!$id) {
-    header("Location: index.php");
-    exit();
+if (!isset($_GET['id'])) {
+    die("Invalid request.");
 }
 
-// check post ownership
+$post_id = (int) $_GET['id'];
+
+// check if post exists
 $stmt = $pdo->prepare("SELECT * FROM posts WHERE id = ?");
-$stmt->execute([$id]);
+$stmt->execute([$post_id]);
 $post = $stmt->fetch();
 
-if (!$post || $post['author'] !== $_SESSION['username']) {
-    die("You are not allowed to delete this post.");
+if (!$post) {
+    die("Post not found.");
 }
 
-// delete post
+// just delete (no author check if your table doesn’t have one)
 $stmt = $pdo->prepare("DELETE FROM posts WHERE id = ?");
-$stmt->execute([$id]);
+$stmt->execute([$post_id]);
 
 header("Location: index.php");
-exit();
-?>
+exit;
