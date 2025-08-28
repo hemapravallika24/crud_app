@@ -1,26 +1,27 @@
 <?php
-include 'config.php';
+require_once __DIR__ . '/config.php';
 
-// session_start();   <-- ❌ remove this, already inside config.php
-
-if (!isset($_SESSION['username'])) {
-    header("Location: login.php");
-    exit();
+if (!is_logged_in()) {
+    die("You must be logged in to create a post.");
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $title = $_POST['title'];
-    $content = $_POST['content'];
-    $author = $_SESSION['username'];
+    $title = trim($_POST['title']);
+    $content = trim($_POST['content']);
 
-    // use $pdo instead of $conn
-    $stmt = $pdo->prepare("INSERT INTO posts (title, content, author, created_at) VALUES (?, ?, ?, NOW())");
-    $stmt->execute([$title, $content, $author]);
+    if ($title && $content) {
+        // ✅ Insert only title & content
+        $stmt = $pdo->prepare("INSERT INTO posts (title, content) VALUES (?, ?)");
+        $stmt->execute([$title, $content]);
 
-    header("Location: index.php");
-    exit();
+        header("Location: index.php");
+        exit;
+    } else {
+        $error = "Both fields are required.";
+    }
 }
 ?>
+
 <!DOCTYPE html>
 <html>
 <head>
@@ -29,6 +30,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </head>
 <body class="container mt-5">
     <h2>Create New Post</h2>
+    <?php if (!empty($error)): ?>
+        <div class="alert alert-danger"><?php echo $error; ?></div>
+    <?php endif; ?>
     <form method="POST">
         <div class="mb-3">
             <label>Title</label>
@@ -36,9 +40,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
         <div class="mb-3">
             <label>Content</label>
-            <textarea name="content" class="form-control" rows="5" required></textarea>
+            <textarea name="content" class="form-control" required></textarea>
         </div>
-        <button type="submit" class="btn btn-success">Post</button>
+        <button type="submit" class="btn btn-primary">Post</button>
         <a href="index.php" class="btn btn-secondary">Cancel</a>
     </form>
 </body>
