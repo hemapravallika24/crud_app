@@ -2,7 +2,7 @@
 
 <?php
 // Fetch posts
-$stmt = $pdo->query("SELECT p.id, p.title, p.content, p.created_at, u.username, p.user_id
+$stmt = $pdo->query("SELECT p.id, p.title, p.content, p.created_at, p.user_id, u.username
                      FROM posts p
                      LEFT JOIN users u ON u.id = p.user_id
                      ORDER BY p.created_at DESC");
@@ -12,7 +12,7 @@ $posts = $stmt->fetchAll();
 <div class="d-flex justify-content-between align-items-center mb-3">
   <h1 class="h3">All Posts</h1>
   <?php if (is_logged_in()): ?>
-    <a href="create.php" class="btn btn-primary">+ New Post</a>
+    <a href="/crud_app/create.php" class="btn btn-primary">+ New Post</a>
   <?php endif; ?>
 </div>
 
@@ -26,16 +26,16 @@ $posts = $stmt->fetchAll();
           <h5 class="mb-1"><?= htmlspecialchars($post['title']) ?></h5>
           <small><?= htmlspecialchars($post['created_at']) ?></small>
         </div>
-        <p class="mb-1 text-truncate"><?= htmlspecialchars($post['content']) ?></p>
+        <p class="mb-1"><?= nl2br(htmlspecialchars($post['content'])) ?></p>
         <small>By <?= htmlspecialchars($post['username'] ?? 'Unknown') ?></small>
-        
-        <!-- Action Buttons -->
+
         <div class="mt-2">
-          <a href="view.php?id=<?= $post['id'] ?>" class="btn btn-sm btn-info">View</a>
-          
-          <?php if (is_logged_in() && $_SESSION['user_id'] == $post['user_id']): ?>
-            <a href="edit.php?id=<?= $post['id'] ?>" class="btn btn-sm btn-warning">Edit</a>
-            <a href="delete.php?id=<?= $post['id'] ?>" class="btn btn-sm btn-danger"
+          <a href="/crud_app/view.php?id=<?= $post['id'] ?>" class="btn btn-sm btn-info">View</a>
+
+          <?php if (is_logged_in() && $post['user_id'] == $_SESSION['user_id']): ?>
+            <a href="/crud_app/edit.php?id=<?= $post['id'] ?>" class="btn btn-sm btn-warning">Edit</a>
+            <a href="/crud_app/delete.php?id=<?= $post['id'] ?>" 
+               class="btn btn-sm btn-danger"
                onclick="return confirm('Are you sure you want to delete this post?');">Delete</a>
           <?php endif; ?>
         </div>
