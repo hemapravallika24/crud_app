@@ -1,6 +1,5 @@
 <?php
 include 'config.php';
-session_start();
 
 if (!isset($_SESSION['username'])) {
     header("Location: login.php");
@@ -13,15 +12,21 @@ if (!$id) {
     exit();
 }
 
-$stmt = $conn->prepare("SELECT * FROM posts WHERE id = ?");
+// fetch post
+$stmt = $pdo->prepare("SELECT * FROM posts WHERE id = ?");
 $stmt->execute([$id]);
 $post = $stmt->fetch();
 
+if (!$post || $post['author'] !== $_SESSION['username']) {
+    die("You are not allowed to edit this post.");
+}
+
+// handle form submit
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $title = $_POST['title'];
     $content = $_POST['content'];
 
-    $stmt = $conn->prepare("UPDATE posts SET title = ?, content = ? WHERE id = ?");
+    $stmt = $pdo->prepare("UPDATE posts SET title = ?, content = ? WHERE id = ?");
     $stmt->execute([$title, $content, $id]);
 
     header("Location: index.php");
@@ -39,13 +44,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <form method="POST">
         <div class="mb-3">
             <label>Title</label>
-            <input type="text" name="title" class="form-control" value="<?= htmlspecialchars($post['title']); ?>" required>
+            <input type="text" name="title" class="form-control" value="<?= htmlspecialchars($post['title']) ?>" required>
         </div>
         <div class="mb-3">
             <label>Content</label>
-            <textarea name="content" class="form-control" rows="5" required><?= htmlspecialchars($post['content']); ?></textarea>
+            <textarea name="content" class="form-control" rows="5" required><?= htmlspecialchars($post['content']) ?></textarea>
         </div>
-        <button type="submit" class="btn btn-primary">Update</button>
+        <button type="submit" class="btn btn-success">Update</button>
         <a href="index.php" class="btn btn-secondary">Cancel</a>
     </form>
 </body>

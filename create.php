@@ -1,6 +1,7 @@
 <?php
 include 'config.php';
-session_start();
+
+// session_start();   <-- ❌ remove this, already inside config.php
 
 if (!isset($_SESSION['username'])) {
     header("Location: login.php");
@@ -12,7 +13,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $content = $_POST['content'];
     $author = $_SESSION['username'];
 
-    $stmt = $conn->prepare("INSERT INTO posts (title, content, author, created_at) VALUES (?, ?, ?, NOW())");
+    // use $pdo instead of $conn
+    $stmt = $pdo->prepare("INSERT INTO posts (title, content, author, created_at) VALUES (?, ?, ?, NOW())");
     $stmt->execute([$title, $content, $author]);
 
     header("Location: index.php");
