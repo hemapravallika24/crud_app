@@ -1,45 +1,43 @@
 <?php
-require_once __DIR__ . '/config.php';
+include 'config.php';
+session_start();
 
-if (!is_logged_in()) {
+if (!isset($_SESSION['username'])) {
     header("Location: login.php");
-    exit;
+    exit();
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $title = trim($_POST['title']);
-    $content = trim($_POST['content']);
+    $title = $_POST['title'];
+    $content = $_POST['content'];
+    $author = $_SESSION['username'];
 
-    if ($title !== '' && $content !== '') {
-        $stmt = $pdo->prepare("INSERT INTO posts (title, content, user_id) VALUES (?, ?, ?)");
-        $stmt->execute([$title, $content, $_SESSION['user_id']]);
+    $stmt = $conn->prepare("INSERT INTO posts (title, content, author, created_at) VALUES (?, ?, ?, NOW())");
+    $stmt->execute([$title, $content, $author]);
 
-        // ✅ Redirect back to posts list
-        header("Location: index.php");
-        exit;
-    } else {
-        $error = "Both fields are required!";
-    }
+    header("Location: index.php");
+    exit();
 }
 ?>
-
-<?php include 'header.php'; ?>
-<div class="container">
-    <h2>New Post</h2>
-    <?php if (!empty($error)): ?>
-        <div class="alert alert-danger"><?= htmlspecialchars($error) ?></div>
-    <?php endif; ?>
-    <form method="post" action="create.php">
+<!DOCTYPE html>
+<html>
+<head>
+    <title>New Post</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+</head>
+<body class="container mt-5">
+    <h2>Create New Post</h2>
+    <form method="POST">
         <div class="mb-3">
-            <label class="form-label">Title</label>
+            <label>Title</label>
             <input type="text" name="title" class="form-control" required>
         </div>
         <div class="mb-3">
-            <label class="form-label">Content</label>
+            <label>Content</label>
             <textarea name="content" class="form-control" rows="5" required></textarea>
         </div>
-        <button type="submit" class="btn btn-primary">Create</button>
-        <a href="index.php" class="btn btn-link">Cancel</a>
+        <button type="submit" class="btn btn-success">Post</button>
+        <a href="index.php" class="btn btn-secondary">Cancel</a>
     </form>
-</div>
-<?php include 'footer.php'; ?>
+</body>
+</html>
