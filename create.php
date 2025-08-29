@@ -2,25 +2,23 @@
 require_once __DIR__ . '/config.php';
 
 if (!is_logged_in()) {
-    die("You must be logged in to create a post.");
+    header("Location: login.php");
+    exit;
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $title = trim($_POST['title']);
-    $content = trim($_POST['content']);
+    $title = $_POST['title'] ?? '';
+    $content = $_POST['content'] ?? '';
+    $user_id = $_SESSION['user']['id']; // ✅ link to logged-in user
 
-    if ($title && $content) {
-        // ✅ Insert only title & content
-        $stmt = $pdo->prepare("INSERT INTO posts (title, content) VALUES (?, ?)");
-        $stmt->execute([$title, $content]);
+    $stmt = $pdo->prepare("INSERT INTO posts (title, content, user_id) VALUES (?, ?, ?)");
+    $stmt->execute([$title, $content, $user_id]);
 
-        header("Location: index.php");
-        exit;
-    } else {
-        $error = "Both fields are required.";
-    }
+    header("Location: index.php");
+    exit;
 }
 ?>
+
 
 <!DOCTYPE html>
 <html>
