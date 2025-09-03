@@ -1,4 +1,4 @@
--- Create database and tables
+-- Create database
 CREATE DATABASE IF NOT EXISTS blog CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE blog;
 
@@ -16,6 +16,6 @@ CREATE TABLE IF NOT EXISTS posts (
   title VARCHAR(255) NOT NULL,
   content TEXT NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  user_id INT NULL,
-  CONSTRAINT fk_posts_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+  user_id INT NOT NULL,  -- 🔹 must belong to a user
+  CONSTRAINT fk_posts_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;

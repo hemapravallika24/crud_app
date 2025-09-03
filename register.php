@@ -1,6 +1,7 @@
-<?php require_once __DIR__ . '/header.php'; ?>
-
 <?php
+require_once __DIR__ . '/config.php';   // ✅ Add this line for DB connection
+require_once __DIR__ . '/header.php';
+
 $username = "";
 $errors = [];
 
@@ -23,11 +24,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $hash = password_hash($password, PASSWORD_BCRYPT);
             $stmt = $pdo->prepare("INSERT INTO users (username, password) VALUES (?, ?)");
             $stmt->execute([$username, $hash]);
+
+            // Auto login after register
             $_SESSION['user_id'] = $pdo->lastInsertId();
             $_SESSION['username'] = $username;
-            header("Location: login.php");
-            exit;
 
+            header("Location: index.php");   // ✅ redirect to posts, not login
+            exit;
         }
     }
 }
@@ -57,7 +60,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <input class="form-control" type="password" name="confirm">
   </div>
   <button class="btn btn-primary">Create Account</button>
-  <a class="btn btn-link" href="/login.php">Already have an account?</a>
+  <a class="btn btn-link" href="login.php">Already have an account?</a>
 </form>
 
 <?php require_once __DIR__ . '/footer.php'; ?>

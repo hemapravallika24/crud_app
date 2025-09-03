@@ -7,18 +7,21 @@ if (!is_logged_in()) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $title = $_POST['title'] ?? '';
-    $content = $_POST['content'] ?? '';
-    $user_id = $_SESSION['user']['id']; // ✅ link to logged-in user
+    $title = trim($_POST['title'] ?? '');
+    $content = trim($_POST['content'] ?? '');
+    $user_id = $_SESSION['user_id']; // ✅ use session user_id directly
 
-    $stmt = $pdo->prepare("INSERT INTO posts (title, content, user_id) VALUES (?, ?, ?)");
-    $stmt->execute([$title, $content, $user_id]);
+    if ($title !== '' && $content !== '') {
+        $stmt = $pdo->prepare("INSERT INTO posts (title, content, user_id) VALUES (?, ?, ?)");
+        $stmt->execute([$title, $content, $user_id]);
 
-    header("Location: index.php");
-    exit;
+        header("Location: index.php");
+        exit;
+    } else {
+        $error = "Both title and content are required.";
+    }
 }
 ?>
-
 
 <!DOCTYPE html>
 <html>
@@ -29,7 +32,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body class="container mt-5">
     <h2>Create New Post</h2>
     <?php if (!empty($error)): ?>
-        <div class="alert alert-danger"><?php echo $error; ?></div>
+        <div class="alert alert-danger"><?php echo htmlspecialchars($error); ?></div>
     <?php endif; ?>
     <form method="POST">
         <div class="mb-3">
