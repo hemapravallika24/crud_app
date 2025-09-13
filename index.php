@@ -1,58 +1,69 @@
 <?php
-require_once __DIR__ . '/config.php';
+include 'db.php'; // database connection
 
-if (!is_logged_in()) {
-    header("Location: login.php");
-    exit;
+// Pagination setup
+$limit = 5; // posts per page
+$page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+$offset = ($page - 1) * $limit;
+
+// Search filter
+$search = isset($_GET['search']) ? $_GET['search'] : '';
+$where = "";
+$params = [];
+
+if (!empty($search)) {
+    $where = "WHERE title LIKE ? OR content LIKE ?";
+    $params = ["%$search%", "%$search%"];
 }
 
-// Fetch only the logged-in user's posts
-$stmt = $pdo->prepare("SELECT posts.*, users.username 
-                       FROM posts 
-                       JOIN users ON posts.user_id = users.id 
-                       WHERE posts.user_id = ? 
-                       ORDER BY posts.created_at DESC");
-$stmt->execute([$_SESSION['user_id']]);
-$posts = $stmt->fetchAll();
+// Count total posts
+$countSql = "SELECT COUNT(*) as total FROM posts $where";
+$stmt = $conn->prepare($countSql);
+if (!empty($where)) {
+    $stmt->bind_param("ss", $params[0], $params[1]);
+}
+$stmt->execute();
+$countResult = $stmt->get_result()->fetch_assoc();
+$totalPosts = $countResult['total'];
+$totalPages = ceil($totalPosts / $limit);
+
+// Fetch posts with limit
+$sql = "SELECT * FROM posts $where ORDER BY created_at DESC LIMIT ? OFFSET ?";
+$stmt = $conn->prepare($sql);
+
+if (!empty($where)) {
+    $stmt->bind_param("ssii", $params[0], $params[1], $limit, $offset);
+} else {
+    $stmt->bind_param("ii", $limit, $offset);
+}
+$stmt->execute();
+$result = $stmt->get_result();
 ?>
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>My Blog Posts</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body>
-<?php include 'header.php'; ?>
 
-<div class="container mt-4">
-  <div class="d-flex justify-content-between align-items-center mb-3">
-    <h2>My Posts</h2>
-    <a href="create.php" class="btn btn-primary">+ New Post</a>
-  </div>
+<h2>Posts</h2>
+<?php while ($row = $result->fetch_assoc()) : ?>
+    <div class="post">
+        <h3><?php echo htmlspecialchars($row['title']); ?></h3>
+        <p><?php echo nl2br(htmlspecialchars($row['content'])); ?></p>
+        <small>Posted on <?php echo $row['created_at']; ?></small>
+    </div>
+    <hr>
+<?php endwhile; ?>
 
-  <?php if (count($posts) > 0): ?>
-    <?php foreach ($posts as $post): ?>
-      <div class="card mb-3 shadow-sm">
-        <div class="card-body">
-          <h5 class="card-title"><?= htmlspecialchars($post['title']) ?></h5>
-          <p class="card-text"><?= nl2br(htmlspecialchars($post['content'])) ?></p>
-          <small class="text-muted">
-            By <?= htmlspecialchars($post['username']) ?> | <?= $post['created_at'] ?>
-          </small>
-          <div class="mt-2">
-            <a href="view.php?id=<?= $post['id'] ?>" class="btn btn-info btn-sm">View</a>
-            <a href="edit.php?id=<?= $post['id'] ?>" class="btn btn-warning btn-sm">Edit</a>
-            <a href="delete.php?id=<?= $post['id'] ?>" class="btn btn-danger btn-sm"
-               onclick="return confirm('Are you sure you want to delete this post?');">Delete</a>
-          </div>
-        </div>
-      </div>
-    <?php endforeach; ?>
-  <?php else: ?>
-    <div class="alert alert-info">No posts yet.</div>
-  <?php endif; ?>
+<!-- Pagination Links -->
+<div class="pagination">
+    <?php if ($page > 1): ?>
+        <a href="?search=<?php echo urlencode($search); ?>&page=<?php echo $page - 1; ?>">Previous</a>
+    <?php endif; ?>
+
+    <?php for ($i = 1; $i <= $totalPages; $i++): ?>
+        <a href="?search=<?php echo urlencode($search); ?>&page=<?php echo $i; ?>" 
+           class="<?php echo ($i == $page) ? 'active' : ''; ?>">
+           <?php echo $i; ?>
+        </a>
+    <?php endfor; ?>
+
+    <?php if ($page < $totalPages): ?>
+        <a href="?search=<?php echo urlencode($search); ?>&page=<?php echo $page + 1; ?>">Next</a>
+    <?php endif; ?>
 </div>
-</body>
-</html>
