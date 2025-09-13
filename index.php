@@ -1,5 +1,10 @@
 <?php
-include 'db.php'; // database connection
+require_once __DIR__ . '/config.php';
+
+if (!is_logged_in()) {
+    header("Location: login.php");
+    exit;
+}
 
 // Pagination setup
 $limit = 5; // posts per page
@@ -7,63 +12,113 @@ $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $offset = ($page - 1) * $limit;
 
 // Search filter
-$search = isset($_GET['search']) ? $_GET['search'] : '';
-$where = "";
-$params = [];
+$search = isset($_GET['search']) ? trim($_GET['search']) : '';
 
+// Count total posts for pagination
 if (!empty($search)) {
-    $where = "WHERE title LIKE ? OR content LIKE ?";
-    $params = ["%$search%", "%$search%"];
+    $countStmt = $pdo->prepare("SELECT COUNT(*) as total 
+                                FROM posts 
+                                WHERE user_id = ? AND (title LIKE ? OR content LIKE ?)");
+    $countStmt->execute([$_SESSION['user_id'], "%$search%", "%$search%"]);
+} else {
+    $countStmt = $pdo->prepare("SELECT COUNT(*) as total FROM posts WHERE user_id = ?");
+    $countStmt->execute([$_SESSION['user_id']]);
 }
-
-// Count total posts
-$countSql = "SELECT COUNT(*) as total FROM posts $where";
-$stmt = $conn->prepare($countSql);
-if (!empty($where)) {
-    $stmt->bind_param("ss", $params[0], $params[1]);
-}
-$stmt->execute();
-$countResult = $stmt->get_result()->fetch_assoc();
-$totalPosts = $countResult['total'];
+$totalPosts = $countStmt->fetchColumn();
 $totalPages = ceil($totalPosts / $limit);
 
-// Fetch posts with limit
-$sql = "SELECT * FROM posts $where ORDER BY created_at DESC LIMIT ? OFFSET ?";
-$stmt = $conn->prepare($sql);
-
-if (!empty($where)) {
-    $stmt->bind_param("ssii", $params[0], $params[1], $limit, $offset);
+// Fetch posts with search and pagination
+if (!empty($search)) {
+    $stmt = $pdo->prepare("SELECT posts.*, users.username 
+                           FROM posts 
+                           JOIN users ON posts.user_id = users.id 
+                           WHERE posts.user_id = ? AND (posts.title LIKE ? OR posts.content LIKE ?)
+                           ORDER BY posts.created_at DESC
+                           LIMIT ? OFFSET ?");
+    $stmt->execute([$_SESSION['user_id'], "%$search%", "%$search%", $limit, $offset]);
 } else {
-    $stmt->bind_param("ii", $limit, $offset);
+    $stmt = $pdo->prepare("SELECT posts.*, users.username 
+                           FROM posts 
+                           JOIN users ON posts.user_id = users.id 
+                           WHERE posts.user_id = ?
+                           ORDER BY posts.created_at DESC
+                           LIMIT ? OFFSET ?");
+    $stmt->execute([$_SESSION['user_id'], $limit, $offset]);
 }
-$stmt->execute();
-$result = $stmt->get_result();
+
+$posts = $stmt->fetchAll();
 ?>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>My Blog Posts</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+<?php include 'header.php'; ?>
 
-<h2>Posts</h2>
-<?php while ($row = $result->fetch_assoc()) : ?>
-    <div class="post">
-        <h3><?php echo htmlspecialchars($row['title']); ?></h3>
-        <p><?php echo nl2br(htmlspecialchars($row['content'])); ?></p>
-        <small>Posted on <?php echo $row['created_at']; ?></small>
-    </div>
-    <hr>
-<?php endwhile; ?>
+<div class="container mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>My Posts</h2>
+    <a href="create.php" class="btn btn-primary">+ New Post</a>
+  </div>
 
-<!-- Pagination Links -->
-<div class="pagination">
-    <?php if ($page > 1): ?>
-        <a href="?search=<?php echo urlencode($search); ?>&page=<?php echo $page - 1; ?>">Previous</a>
-    <?php endif; ?>
+  <!-- Search Form -->
+  <form method="GET" class="mb-3">
+      <div class="input-group">
+          <input type="text" name="search" class="form-control" placeholder="Search posts..."
+                 value="<?= htmlspecialchars($search) ?>">
+          <button class="btn btn-outline-secondary" type="submit">Search</button>
+      </div>
+  </form>
 
-    <?php for ($i = 1; $i <= $totalPages; $i++): ?>
-        <a href="?search=<?php echo urlencode($search); ?>&page=<?php echo $i; ?>" 
-           class="<?php echo ($i == $page) ? 'active' : ''; ?>">
-           <?php echo $i; ?>
-        </a>
-    <?php endfor; ?>
+  <?php if (count($posts) > 0): ?>
+    <?php foreach ($posts as $post): ?>
+      <div class="card mb-3 shadow-sm">
+        <div class="card-body">
+          <h5 class="card-title"><?= htmlspecialchars($post['title']) ?></h5>
+          <p class="card-text"><?= nl2br(htmlspecialchars($post['content'])) ?></p>
+          <small class="text-muted">
+            By <?= htmlspecialchars($post['username']) ?> | <?= $post['created_at'] ?>
+          </small>
+          <div class="mt-2">
+            <a href="view.php?id=<?= $post['id'] ?>" class="btn btn-info btn-sm">View</a>
+            <a href="edit.php?id=<?= $post['id'] ?>" class="btn btn-warning btn-sm">Edit</a>
+            <a href="delete.php?id=<?= $post['id'] ?>" class="btn btn-danger btn-sm"
+               onclick="return confirm('Are you sure you want to delete this post?');">Delete</a>
+          </div>
+        </div>
+      </div>
+    <?php endforeach; ?>
 
-    <?php if ($page < $totalPages): ?>
-        <a href="?search=<?php echo urlencode($search); ?>&page=<?php echo $page + 1; ?>">Next</a>
-    <?php endif; ?>
+    <!-- Pagination Links -->
+    <nav aria-label="Page navigation">
+      <ul class="pagination justify-content-center">
+        <?php if ($page > 1): ?>
+          <li class="page-item">
+            <a class="page-link" href="?search=<?= urlencode($search) ?>&page=<?= $page - 1 ?>">Previous</a>
+          </li>
+        <?php endif; ?>
+
+        <?php for ($i = 1; $i <= $totalPages; $i++): ?>
+          <li class="page-item <?= ($i == $page) ? 'active' : '' ?>">
+            <a class="page-link" href="?search=<?= urlencode($search) ?>&page=<?= $i ?>"><?= $i ?></a>
+          </li>
+        <?php endfor; ?>
+
+        <?php if ($page < $totalPages): ?>
+          <li class="page-item">
+            <a class="page-link" href="?search=<?= urlencode($search) ?>&page=<?= $page + 1 ?>">Next</a>
+          </li>
+        <?php endif; ?>
+      </ul>
+    </nav>
+
+  <?php else: ?>
+    <div class="alert alert-info">No posts found.</div>
+  <?php endif; ?>
 </div>
+</body>
+</html>
