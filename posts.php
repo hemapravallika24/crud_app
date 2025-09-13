@@ -1,15 +1,6 @@
 <?php
-// db.php content here (or include 'db.php')
-$servername = "localhost";
-$username = "root"; // your DB username
-$password = "";     // your DB password
-$dbname = "blog";
-
-// Create connection
-$conn = new mysqli($servername, $username, $password, $dbname);
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
-}
+// Include database connection
+include 'db.php'; // Make sure db.php exists in the same folder
 
 // Pagination setup
 $limit = 5; // posts per page
@@ -27,28 +18,37 @@ if (!empty($search)) {
 }
 
 // Count total posts
-$countSql = "SELECT COUNT(*) as total FROM posts $where";
-$stmt = $conn->prepare($countSql);
-if (!empty($where)) {
+if (!empty($search)) {
+    $countSql = "SELECT COUNT(*) as total FROM posts $where";
+    $stmt = $conn->prepare($countSql);
     $stmt->bind_param("ss", $params[0], $params[1]);
+} else {
+    $countSql = "SELECT COUNT(*) as total FROM posts";
+    $stmt = $conn->prepare($countSql);
 }
+
 $stmt->execute();
 $countResult = $stmt->get_result()->fetch_assoc();
 $totalPosts = $countResult['total'];
 $totalPages = ceil($totalPosts / $limit);
 
 // Fetch posts with limit and join users
-$sql = "SELECT posts.*, users.username 
-        FROM posts 
-        JOIN users ON posts.user_id = users.id 
-        $where 
-        ORDER BY posts.created_at DESC 
-        LIMIT ? OFFSET ?";
-$stmt = $conn->prepare($sql);
-
-if (!empty($where)) {
+if (!empty($search)) {
+    $sql = "SELECT posts.*, users.username 
+            FROM posts 
+            JOIN users ON posts.user_id = users.id 
+            $where 
+            ORDER BY posts.created_at DESC 
+            LIMIT ? OFFSET ?";
+    $stmt = $conn->prepare($sql);
     $stmt->bind_param("ssii", $params[0], $params[1], $limit, $offset);
 } else {
+    $sql = "SELECT posts.*, users.username 
+            FROM posts 
+            JOIN users ON posts.user_id = users.id 
+            ORDER BY posts.created_at DESC 
+            LIMIT ? OFFSET ?";
+    $stmt = $conn->prepare($sql);
     $stmt->bind_param("ii", $limit, $offset);
 }
 
@@ -61,12 +61,20 @@ $result = $stmt->get_result();
 <head>
     <title>Blog Posts</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f7f7f7; }
         form { margin-bottom: 20px; }
         input[type="text"] { padding: 6px; width: 200px; }
         button { padding: 6px 12px; cursor: pointer; }
-        .post { margin-bottom: 15px; }
-        .pagination a { margin: 0 5px; text-decoration: none; padding: 5px 10px; border: 1px solid #333; border-radius: 4px; }
+        .post { 
+            background: #fff; 
+            padding: 15px; 
+            margin-bottom: 15px; 
+            border-radius: 8px; 
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1); 
+        }
+        .post h3 { margin-top: 0; }
+        .pagination { margin-top: 20px; }
+        .pagination a { margin: 0 5px; text-decoration: none; padding: 5px 10px; border: 1px solid #333; border-radius: 4px; color: #333; }
         .pagination a.active { background: #333; color: white; }
         small { color: gray; }
     </style>
@@ -80,14 +88,17 @@ $result = $stmt->get_result();
 </form>
 
 <h2>Posts</h2>
-<?php while ($row = $result->fetch_assoc()) : ?>
-    <div class="post">
-        <h3><?php echo htmlspecialchars($row['title']); ?></h3>
-        <p><?php echo nl2br(htmlspecialchars($row['content'])); ?></p>
-        <small>Posted by <?php echo htmlspecialchars($row['username']); ?> on <?php echo $row['created_at']; ?></small>
-    </div>
-    <hr>
-<?php endwhile; ?>
+<?php if($totalPosts > 0): ?>
+    <?php while ($row = $result->fetch_assoc()) : ?>
+        <div class="post">
+            <h3><?php echo htmlspecialchars($row['title']); ?></h3>
+            <p><?php echo nl2br(htmlspecialchars($row['content'])); ?></p>
+            <small>Posted by <?php echo htmlspecialchars($row['username']); ?> on <?php echo $row['created_at']; ?></small>
+        </div>
+    <?php endwhile; ?>
+<?php else: ?>
+    <p>No posts found.</p>
+<?php endif; ?>
 
 <!-- Pagination Links -->
 <div class="pagination">

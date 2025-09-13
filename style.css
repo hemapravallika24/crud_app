@@ -1,6 +1,7 @@
 body {
     font-family: Arial, sans-serif;
     margin: 20px;
+    background-color: #f7f7f7;
 }
 
 form {
@@ -18,7 +19,23 @@ button {
 }
 
 .post {
+    background: #fff;
+    padding: 15px;
     margin-bottom: 15px;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.post h3 {
+    margin-top: 0;
+}
+
+small {
+    color: gray;
+}
+
+.pagination {
+    margin-top: 20px;
 }
 
 .pagination a {
@@ -27,6 +44,7 @@ button {
     padding: 5px 10px;
     border: 1px solid #333;
     border-radius: 4px;
+    color: #333;
 }
 
 .pagination a.active {
